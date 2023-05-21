@@ -320,7 +320,7 @@
     
  **2. 결제 API - 잔액 부족 에러 해결**
 - point 결제 API 통신 중, user의 보유 point가 충분함에도 잔액 부족 Error가 발생하는 상황이 생겼습니다. 
-- 분명 잔액 point가 충분함을 확인했고, 코드를 아무리 쳐다봐도 왜 error가 나는지 이해할 수 없었는데, console.log()로 데이터 타입을 확인해보니 문제를 알 수 있었습니다.
+- console.log()로 데이터 타입을 확인하여 문제를 확인할 수 있었습니다.
 
   <details>
   <summary>기존 코드</summary>
@@ -340,8 +340,8 @@
   </details>
 
   
-- user.point와 order.totalPrice가 `string` 타입으로 인식되어 user.point가 [10,000,000] 있더라도 order.totalPrice가 [900,000]이라면 if문이 동작하여 에러로 인식되는 것이었습니다.
-- 둘을 number 타입으로 인식시키기 위해 코드를 수정했습니다. 
+- user의 point와 주문 총액(totalPrice)이 `string` 타입으로 인식되어 point가 [10,000,000] 있더라도 주문 총액이 [900,000]이라면 if문이 실행되어 에러를 반환하는 것임을 깨달았습니다.
+- 두 값을 number 타입으로 인식시키기 위해 빼기(-) 연산을 사용하여 코드를 수정했습니다. 
   
   <details>
   <summary>수정된 코드</summary>
