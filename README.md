@@ -153,7 +153,7 @@
 - 하나의 함수를 재사용할 수 있도록 if-else if문을 사용하여 조건에 따라 쿼리문이 달라지는 함수를 작성하였습니다.  
 
   <details>
-  <summary>if-else if를 활용한 코드</summary>
+  <summary>if-else if문을 활용한 코드</summary>
   <div markdown="1">
   
     - 조건에 따라 if문이 실행되도록 설계
