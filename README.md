@@ -1,6 +1,6 @@
 # 4bsop 커머셜 웹사이트 제작 (Backend)
 장다희 ([**Github**](https://github.com/walwald), [회고록](https://walwaldev.tistory.com/49))<br>
-왕광현 ([**Github**](https://github.com/), [회고록](https://khwang24.tistory.com/14))<br>
+왕광현 ([회고록](https://khwang24.tistory.com/14))<br>
 > 위코드 44기 1차 프로젝트 <br>
 > 하이엔드 화장품 브랜드 Aesop을 모델링하여 커머셜 웹사이트 제작<br>
 [결과물 url](http://s3-hosting-jiyeoun.s3-website.ap-northeast-2.amazonaws.com/)
@@ -8,7 +8,7 @@
 > **짧은 프로젝트 기간동안 개발에 집중해야 하므로 디자인/기획 부분만 클론했습니다.<br>
 개발은 초기 세팅부터 전부 직접 구현했으며, 아래 데모 영상에서 보이는 부분은 모두 백앤드와 연결하여 실제 사용할 수 있는 서비스 수준으로 개발한 것입니다.*
 
-## 프로젝트 기간 & 인원
+## 📍프로젝트 기간 & 인원
 * 프로젝트 기간: 2주 (2023.04.03 ~ 2023.04.16)   
 * 개발 인원:  
   `Frontend`: 김영운, 박지연 <br>
@@ -16,7 +16,7 @@
 * [프론트엔드 Github 저장소](https://github.com/wecode-bootcamp-korea/44-1st-four-branch-frontend)
 * 모델링한 사이트: [이솝(Aesop)](https://www.aesop.com/kr/)
  
- ## 사용 기술
+ ## 📍사용 기술
 
 * BackEnd   
 
@@ -31,12 +31,17 @@
 <img src="https://img.shields.io/badge/slack-4A154B?style=for-the-badge&logo=Slack&logoColor=wihte"> <br>
 <img src="https://img.shields.io/badge/notion-000000?style=for-the-badge&logo=notion&logoColor=white"> <br>
 
- ## ERD
+ ## 📍ERD
  
 ![image](https://user-images.githubusercontent.com/120387100/233080857-d5912540-1add-4c1d-aa7f-048d97d52026.png)
 
- ## 핵심 기능
+ ## 📍핵심 기능
+ > 쇼핑몰 웹사이트의 핵심 기능인 [회원가입/로그인, 상품 리스트, 상품 상세 정보, 상품 검색, 장바구니, 주문, 결제] 기능을 구현하였습니다.
  
+<details>
+<summary>핵심 기능 설명 펼치기</summary>
+<div markdown="1">
+  
  ### Users
  
  **회원가입**
@@ -136,6 +141,228 @@
 - MySql의 transaction 기능을 활용하여 '고객 포인트 차감, 주문 및 주문 상품 상태 `결제 대기`에서 `결제 완료`로 변경, 카트 내역 삭제'가 함께 동작하며, 에러 발생 시 함께 철회되도록 구현
 - 주문 총액이 보유 포인트보다 적을 경우 에러 메시지 반환
 - 결제 완료 후 주문 및 결제 완료 상태의 주문 내역 반환
+</div>
+</details>
+<br>
+
+## 📍핵심 트러블슈팅
+ **1. 상품 조회 API - productDao 쿼리문 효율화**
+- 상품리스트와 상품 상세 페이지 구현을 위해 [상위 카테고리, 하위 카테고리, 정렬 조건, 페이지네이션, 상품 id] 등 다양한 조건에 따라 상품 정보를 보내는 API 구현하게 되었습니다. 
+- 처음에는 각 조건에 따라 데이터를 불러오는 query문이 포함된 function을 productDao 내에 각각 작성했습니다. 
+- 같은 SELECT문에 조건만 다르게 붙은 함수를 반복적으로 작성하는 과정에서, 하나의 함수로 이 기능을 구현할 수는 없을까 하는 의구심이 들었습니다.
+
+  <details>
+  <summary>기존 코드</summary>
+  <div markdown="1">
+  
+    - 조건에 따라 if문이 실행되도록 설계
+    
+    ```Javascript
+    //productDao.js - if문을 활용한 getProductByCondition 함수
+
+    const getProductsByCondition = async (subId, mainId, pId, isMain) => {
+      try {
+        let condition = '';
+        if (subId) {
+          condition = `WHERE sc.id = ${subId}`;
+        } else if (mainId) {
+          condition = `WHERE m.id = ${mainId}`;
+        } else if (pId) {
+          condition = `WHERE p.id = ${pId}`;
+        } else if (isMain) {
+          condition = `WHERE p.main_product = ${isMain}`;
+        }
+
+        return await appDataSource.query(
+          `SELECT 
+            p.id,
+            p.name,
+            p.price,
+            p.description,
+            p.size_id sizeId,
+            p.sub_category_id subCategoryId,
+            s.size size,
+            sc.name subCategoryName,
+            m.id mainCategoryId,
+            m.name mainCategoryName,
+            i.url imageUrl,
+            joined_ig.ig_array ingredients
+        FROM products p
+        JOIN sizes s ON p.size_id = s.id
+        JOIN sub_categories sc ON sc.id = p.sub_category_id
+        JOIN main_categories m ON sc.main_category_id = m.id
+        JOIN products_images pi ON p.id = pi.product_id
+        JOIN images i ON i.id = pi.image_id
+        JOIN (
+            SELECT
+                pig.product_id pid,
+                JSON_ARRAYAGG(ig.name) ig_array
+            FROM ingredients ig
+            JOIN products_ingredients pig ON pig.ingredient_id = ig.id
+            GROUP BY pig.product_id
+        ) joined_ig ON joined_ig.pid = p.id        
+        ${condition}`
+        );
+      } catch (err) {
+        err.message = 'DATABASE_ERROR';
+        err.statusCode = 400;
+        throw err;
+      }
+    };
+  ```
+  </div>
+  </details>
+    
+ - 기존 코드에서는 정렬과 페이지네이션이 동시에 적용되기 어렵다는 사실을 깨닫고, 이를 해결하기 위해 `단축 평가`를 활용하여 함수를 만들었습니다.
+  
+    <details>
+    <summary>수정된 코드</summary>
+    <div markdown="1">
+      
+      ```JavaScript
+      //productDao.js - 단축 평가를 활용한 getProductsByCondition 함수
+
+      const getProductsByCondition = async (
+        subId,
+        mainId,
+        pId,
+        isMain,
+        orderBy,
+        sorting,
+        offset = 0,
+        limit = 10
+      ) => {
+        try {
+          const conditions = [
+            subId && `WHERE sc.id = ${subId}`,
+            mainId && `WHERE m.id = ${mainId}`,
+            pId && `WHERE p.id = ${pId}`,
+            isMain && `WHERE p.main_product = ${isMain}`,
+          ].filter(Boolean);
+
+          const orderings = [
+            orderBy && `ORDER BY ${orderBy}`,
+            sorting && `${sorting}`,
+          ].filter(Boolean);
+
+          const pagination = [
+            limit && `LIMIT ${limit}`,
+            offset && `OFFSET ${offset}`,
+          ].filter(Boolean);
+
+          const condition = conditions[0] || '';
+          const ordering = orderings.join(' ') || '';
+          const paging = pagination.join(' ') || '';
+
+          return await appDataSource.query(
+            `SELECT 
+              p.id,
+              p.name,
+              p.price,
+              p.description,
+              p.summary,
+              p.size_id sizeId,
+              p.sub_category_id subCategoryId,
+              s.size size,
+              sc.name subCategoryName,
+              m.id mainCategoryId,
+              m.name mainCategoryName,
+              i.url imageUrl,
+              joined_ig.ig_array ingredients
+          FROM products p
+          LEFT JOIN sizes s ON p.size_id = s.id
+          LEFT JOIN sub_categories sc ON sc.id = p.sub_category_id
+          LEFT JOIN main_categories m ON sc.main_category_id = m.id
+          LEFT JOIN products_images pi ON p.id = pi.product_id
+          LEFT JOIN images i ON i.id = pi.image_id
+          LEFT JOIN (
+              SELECT
+                  pig.product_id pid,
+                  JSON_ARRAYAGG(ig.name) ig_array
+              FROM ingredients ig
+              JOIN products_ingredients pig ON pig.ingredient_id = ig.id
+              GROUP BY pig.product_id
+          ) joined_ig ON joined_ig.pid = p.id        
+          ${condition}
+          ${ordering}
+          ${paging}`
+          );
+        } catch (err) {
+          err.message = 'DATABASE_ERROR';
+          err.statusCode = 400;
+          throw err;
+        }
+      };
+      
+      ```
+      
+      - [orderBy - sorting], [offset - limit]과 같이 경우 반드시 pair로 들어와야하는 경우를 커버하기 위해 productService 함수 내에 에러 핸들러를 작성했습니다.
+
+      ```JavaScript
+      //productService.js - 반드시 함께 들어와야 하는 인자에 대한 에러처리 if문
+
+      if (!orderBy !== !sorting) {
+        const err = new Error('CONDITION_NEEDS_TO_BE_PAIR');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      if (!offset !== !limit) {
+        const err = new Error('CONDITION_NEEDS_TO_BE_PAIR');
+        err.statusCode = 400;
+        throw err;
+      }
+      ```
+    </div>
+    </details>
+  
+  <br>
+    
+ **2. 결제 API - 잔액 부족 에러 해결**
+- point 결제 API 통신 중, user의 보유 point가 충분함에도 잔액 부족 Error가 발생하는 상황이 생겼습니다. 
+- 분명 잔액 point가 충분함을 확인했고, 코드를 아무리 쳐다봐도 왜 error가 나는지 이해할 수 없었는데, console.log()로 데이터 타입을 확인해보니 문제를 알 수 있었습니다.
+
+  <details>
+  <summary>기존 코드</summary>
+  <div markdown="1">
+
+    ```JavaScript
+    //orderService.js - 잔액이 충분해도 잔액 부족 에러가 났던 기존 코드
+
+    if (user.point < order.totalPrice) {
+        const err = new Error('INSUFFICIENT_POINT');
+        err.statusCode = 400;
+        throw err;
+    };
+    ```
+
+  </div>
+  </details>
+
+  
+- user.point와 order.totalPrice가 `string` 타입으로 인식되어 user.point가 [10,000,000] 있더라도 order.totalPrice가 [900,000]이라면 if문이 동작하여 에러로 인식되는 것이었습니다.
+- 둘을 number 타입으로 인식시키기 위해 코드를 수정했습니다. 
+  
+  <details>
+  <summary>수정된 코드</summary>
+  <div markdown="1">
+    
+   ```JavaScript
+    //orderService.js - 숫자로 인식되도록 수정한 코드
+
+    if (user.point - order.totalPrice < 0) {
+        const err = new Error('INSUFFICIENT_POINT');
+        err.statusCode = 400;
+        throw err;
+    }
+   ```
+
+  </div>
+  </details>
+
+<br>
+  
+***
 
 ## Reference
 
