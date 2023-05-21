@@ -156,7 +156,6 @@
   <summary>if-else if문을 활용한 코드</summary>
   <div markdown="1">
   
-    - 조건에 따라 if문이 실행되도록 설계
     
     ```Javascript
     //productDao.js - if문을 활용한 getProductByCondition 함수
