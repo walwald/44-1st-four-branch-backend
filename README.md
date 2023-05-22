@@ -3,7 +3,7 @@
 왕광현 <br>
 > 위코드 44기 1차 프로젝트 <br>
 > 하이엔드 화장품 브랜드 Aesop을 모델링하여 커머셜 웹사이트 제작<br>
-[결과물 url](http://s3-hosting-jiyeoun.s3-website.ap-northeast-2.amazonaws.com/)
+[결과물 demo url](http://s3-fourbsop-jiyeoun.s3-website.ap-northeast-2.amazonaws.com/)
 
 > **짧은 프로젝트 기간동안 개발에 집중해야 하므로 디자인/기획 부분만 클론했습니다.<br>
 개발은 초기 세팅부터 전부 직접 구현했으며, 아래 데모 영상에서 보이는 부분은 모두 백앤드와 연결하여 실제 사용할 수 있는 서비스 수준으로 개발한 것입니다.*
